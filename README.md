@@ -38,7 +38,12 @@ The widget reads your OAuth token from the macOS Keychain (stored there by Claud
 The widget supports two display modes:
 
 - **Remaining** -- shows how much capacity is LEFT (bucket draining). Bars go from green (plenty) to amber (getting low) to red (nearly empty).
+
+  ![Remaining mode](screenshot.png)
+
 - **Used** -- shows how much capacity is CONSUMED (counter filling). Bars go from amber (normal) to red (nearly full).
+
+  ![Used mode](screenshot-used.png)
 
 **Click the mode badge** in the top-right corner of the widget header to toggle between modes. The label next to each percentage (`left` / `used`) always clarifies what the number means.
 
