@@ -68,7 +68,9 @@ export const className = {
 
 ## How it works
 
-The widget queries the Anthropic OAuth usage API (`https://api.anthropic.com/api/oauth/usage`) using the OAuth token that Claude Code stores in your macOS Keychain. It returns utilization percentages and reset timestamps for both the 5-hour and 7-day rolling windows.
+The widget pulls usage data from Anthropic's servers via their OAuth usage API (`https://api.anthropic.com/api/oauth/usage`). It does **not** track local sessions or count tokens client-side -- it reads the same server-side utilization percentages that Anthropic calculates across all your Claude Code activity. The OAuth token stored in your macOS Keychain by `claude auth` is used to authenticate the request.
+
+The API returns utilization percentages and reset timestamps for both the 5-hour and 7-day rolling windows.
 
 No data leaves your machine beyond the API call to Anthropic's servers (the same call Claude Code itself makes).
 
