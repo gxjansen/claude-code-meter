@@ -17,6 +17,7 @@ Displays both the **5-hour rolling window** and **7-day rolling window** with pr
    ```bash
    brew install --cask ubersicht
    ```
+   If you're install Übersicht for the first time, run it once to create the `widgets` folder where this widget will be installed.
 
 2. Download `claude-code-meter.jsx` into your Ubersicht widgets folder:
 
