@@ -132,12 +132,12 @@ function UsageRow({ label, utilization, resetsAt, mode }) {
   );
 }
 
-export const className = {
+export const className = `
   bottom: "20px",
   right: "20px",
   width: "280px",
   zIndex: 1,
-};
+`;
 
 export const render = ({ output, error, mode }, dispatch) => {
   if (error) {
