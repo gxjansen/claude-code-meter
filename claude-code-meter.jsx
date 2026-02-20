@@ -83,14 +83,14 @@ function UsageBar({ displayValue, mode, segments = 20 }) {
   const filled = Math.round((displayValue / 100) * segments);
   const colors = getBarColor(displayValue, mode);
   return (
-    <div style={{ display: "flex", gap: "2px", alignItems: "center" }}>
+    <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
       {Array.from({ length: segments }, (_, i) => (
         <div
           key={i}
           style={{
-            width: "8px",
-            height: "18px",
-            borderRadius: "1px",
+            width: "12px",
+            height: "24px",
+            borderRadius: "2px",
             backgroundColor: i < filled ? colors.bar : colors.dim,
             boxShadow: i < filled ? `0 0 4px ${colors.glow}` : "none",
             transition: "background-color 0.3s ease",
@@ -101,32 +101,84 @@ function UsageBar({ displayValue, mode, segments = 20 }) {
   );
 }
 
-function UsageRow({ label, utilization, resetsAt, mode }) {
+function PaceBar({ timeElapsedPct, mode, segments = 20 }) {
+  const displayPct = mode === "remaining" ? 100 - timeElapsedPct : timeElapsedPct;
+  const filled = Math.round((displayPct / 100) * segments);
+  return (
+    <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
+      {Array.from({ length: segments }, (_, i) => (
+        <div
+          key={i}
+          style={{
+            width: "12px",
+            height: "8px",
+            borderRadius: "1px",
+            backgroundColor: i < filled ? "#ffffff30" : "#ffffff0a",
+            transition: "background-color 0.3s ease",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function getTimeElapsedPct(resetsAt, periodMs) {
+  if (!resetsAt) return 0;
+  const now = Date.now();
+  const reset = new Date(resetsAt).getTime();
+  const start = reset - periodMs;
+  const elapsed = now - start;
+  return Math.min(100, Math.max(0, (elapsed / periodMs) * 100));
+}
+
+function UsageRow({ label, utilization, resetsAt, mode, periodMs }) {
   const displayValue = mode === "remaining" ? 100 - utilization : utilization;
   const colors = getBarColor(displayValue, mode);
   const { timeStr } = formatTimeLeft(resetsAt);
   const resetTime = formatResetTime(resetsAt);
   const suffix = mode === "remaining" ? "left" : "used";
+  const timeElapsedPct = getTimeElapsedPct(resetsAt, periodMs);
+
+  // Pace delta: positive = ahead of pace (used more than time elapsed), negative = behind
+  const paceDelta = utilization - timeElapsedPct;
+  const paceAbs = Math.round(Math.abs(paceDelta));
+  const paceLabel = paceDelta > 1
+    ? `${paceAbs}% above pace`
+    : paceDelta < -1
+    ? `${paceAbs}% below pace`
+    : "on pace";
+  const paceColor = paceDelta > 10 ? RED : paceDelta > 1 ? AMBER : paceDelta < -1 ? GREEN : AMBER;
+
   return (
-    <div style={{ marginBottom: "12px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-        <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: TEXT_DIM }}>
+    <div style={{ marginBottom: "16px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+        <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: TEXT_DIM }}>
           {label}
         </span>
         <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-          <span style={{ fontSize: "22px", fontWeight: 700, color: colors.bar, fontFamily: "Menlo, monospace" }}>
+          <span style={{ fontSize: "30px", fontWeight: 700, color: colors.bar, fontFamily: "Menlo, monospace" }}>
             {Math.round(displayValue)}
-            <span style={{ fontSize: "12px", fontWeight: 400 }}>%</span>
+            <span style={{ fontSize: "16px", fontWeight: 400 }}>%</span>
           </span>
-          <span style={{ fontSize: "9px", fontWeight: 500, color: TEXT_DIM, letterSpacing: "0.5px" }}>
+          <span style={{ fontSize: "12px", fontWeight: 500, color: TEXT_DIM, letterSpacing: "0.5px" }}>
             {suffix}
           </span>
         </div>
       </div>
       <UsageBar displayValue={displayValue} mode={mode} />
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "5px", fontSize: "10px", color: TEXT_DIM, fontFamily: "Menlo, monospace" }}>
-        <span>resets {resetTime}</span>
-        <span>{timeStr}</span>
+      <div style={{ marginTop: "4px" }}>
+        <PaceBar timeElapsedPct={timeElapsedPct} mode={mode} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
+        <div style={{ fontSize: "12px", color: TEXT_DIM, fontFamily: "Menlo, monospace" }}>
+          <span>resets {resetTime}</span>
+        </div>
+        <span style={{ fontSize: "11px", fontWeight: 600, color: paceColor, letterSpacing: "0.5px" }}>
+          {paceLabel}
+        </span>
+        <div style={{ fontSize: "12px", color: TEXT_DIM, fontFamily: "Menlo, monospace" }}>
+          <span>{timeStr}</span>
+        </div>
       </div>
     </div>
   );
@@ -135,7 +187,7 @@ function UsageRow({ label, utilization, resetsAt, mode }) {
 export const className = {
   bottom: "20px",
   right: "20px",
-  width: "280px",
+  width: "380px",
   zIndex: 1,
 };
 
@@ -169,6 +221,7 @@ export const render = ({ output, error, mode }, dispatch) => {
 
   const fiveHour = data.five_hour || { utilization: 0, resets_at: null };
   const sevenDay = data.seven_day || { utilization: 0, resets_at: null };
+  const sevenDaySonnet = data.seven_day_sonnet || null;
   const modeLabel = mode === "remaining" ? "remaining" : "used";
 
   return (
@@ -236,13 +289,21 @@ export const render = ({ output, error, mode }, dispatch) => {
       </div>
 
       {/* 5-hour session */}
-      <UsageRow label="5-hour window" utilization={fiveHour.utilization} resetsAt={fiveHour.resets_at} mode={mode} />
+      <UsageRow label="5-hour window" utilization={fiveHour.utilization} resetsAt={fiveHour.resets_at} mode={mode} periodMs={5 * 60 * 60 * 1000} />
 
       {/* Divider */}
       <div style={{ borderTop: `1px solid ${BORDER}`, margin: "4px 0 12px" }} />
 
       {/* 7-day session */}
-      <UsageRow label="7-day window" utilization={sevenDay.utilization} resetsAt={sevenDay.resets_at} mode={mode} />
+      <UsageRow label="7-day window" utilization={sevenDay.utilization} resetsAt={sevenDay.resets_at} mode={mode} periodMs={7 * 24 * 60 * 60 * 1000} />
+
+      {/* Sonnet 7-day (only shown if data exists) */}
+      {sevenDaySonnet && (
+        <div>
+          <div style={{ borderTop: `1px solid ${BORDER}`, margin: "4px 0 12px" }} />
+          <UsageRow label="7-day window (sonnet)" utilization={sevenDaySonnet.utilization} resetsAt={sevenDaySonnet.resets_at} mode={mode} periodMs={7 * 24 * 60 * 60 * 1000} />
+        </div>
+      )}
     </div>
   );
 };
