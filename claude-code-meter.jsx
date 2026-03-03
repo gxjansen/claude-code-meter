@@ -123,7 +123,7 @@ function PaceBar({ timeElapsedPct, mode, segments = 20 }) {
 }
 
 function getTimeElapsedPct(resetsAt, periodMs) {
-  if (!resetsAt) return 0;
+  if (!resetsAt || !periodMs) return 0;
   const now = Date.now();
   const reset = new Date(resetsAt).getTime();
   const start = reset - periodMs;

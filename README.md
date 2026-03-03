@@ -60,7 +60,7 @@ The label next to each percentage (`left` / `used`) always clarifies what the nu
 
    ```bash
    curl -o "$HOME/Library/Application Support/Übersicht/widgets/claude-code-meter.jsx" \
-     https://raw.githubusercontent.com/pxlshpr/claude-code-meter/main/claude-code-meter.jsx
+     https://raw.githubusercontent.com/gxjansen/claude-code-meter/main/claude-code-meter.jsx
    ```
 
 3. Launch Ubersicht (or it will pick up the file automatically if already running).
