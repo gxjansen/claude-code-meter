@@ -75,11 +75,23 @@ The API returns utilization percentages and reset timestamps for both the 5-hour
 
 No data leaves your machine beyond the API call to Anthropic's servers (the same call Claude Code itself makes).
 
+## Error handling
+
+The widget detects specific error conditions and shows targeted messages:
+
+- **Token expired** -- OAuth token has expired (typically after a reboot or long idle period). Click the re-authenticate button to launch `claude auth login`.
+- **Authentication failed** -- API rejected the token (401/403). Click to re-authenticate.
+- **No credentials found** -- Claude Code keychain entry is missing. Run `claude auth login` in your terminal.
+- **Rate limited** -- Too many API requests. The widget will retry automatically on the next refresh cycle.
+- **Network error** -- Cannot reach the Anthropic API. Check your internet connection.
+
+For auth-related errors, the widget shows a clickable **re-authenticate button** that runs `claude auth login` to open a browser-based login flow. Once you complete the login, the widget will automatically pick up the new token on its next refresh.
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| "Auth failed" error | Run `claude auth` in your terminal to refresh credentials |
+| "Token expired" or "Authentication failed" | Click the re-authenticate button in the widget, or run `claude auth login` in your terminal |
 | Widget not appearing | Grant Ubersicht screen recording permission in System Settings > Privacy & Security |
 | "Loading..." stuck | Check that `security find-generic-password -s "Claude Code-credentials" -w` returns valid JSON |
 | Stale countdown | The timer updates every 30s (on each API refresh), not every second |
