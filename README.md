@@ -53,7 +53,7 @@ Open `claude-code-meter.jsx` in a text editor to change defaults at the top of t
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `DEFAULT_MODE` | `"remaining"` | Starting display mode (`"remaining"` or `"used"`) |
-| `REFRESH_MS` | `30000` | API poll interval in milliseconds |
+| `REFRESH_MS` | `300000` | API poll interval in milliseconds (default 5 min) |
 
 ### Position
 
@@ -82,7 +82,7 @@ The widget detects specific error conditions and shows targeted messages:
 - **Token expired** -- OAuth token has expired (typically after a reboot or long idle period). Click the re-authenticate button to launch `claude auth login`.
 - **Authentication failed** -- API rejected the token (401/403). Click to re-authenticate.
 - **No credentials found** -- Claude Code keychain entry is missing. Run `claude auth login` in your terminal.
-- **Rate limited** -- Too many API requests. The widget will retry automatically on the next refresh cycle.
+- **Rate limited** -- Too many API requests. The widget shows cached data (with an amber "cached" indicator) during backoff, then retries automatically.
 - **Network error** -- Cannot reach the Anthropic API. Check your internet connection.
 
 For auth-related errors, the widget shows a clickable **re-authenticate button** that runs `claude auth login` to open a browser-based login flow. Once you complete the login, the widget will automatically pick up the new token on its next refresh.
@@ -94,7 +94,7 @@ For auth-related errors, the widget shows a clickable **re-authenticate button**
 | "Token expired" or "Authentication failed" | Click the re-authenticate button in the widget, or run `claude auth login` in your terminal |
 | Widget not appearing | Grant Ubersicht screen recording permission in System Settings > Privacy & Security |
 | "Loading..." stuck | Check that `security find-generic-password -s "Claude Code-credentials" -w` returns valid JSON |
-| Stale countdown | The timer updates every 30s (on each API refresh), not every second |
+| Stale countdown | The timer updates every 5 minutes (on each API refresh), not every second |
 
 ## License
 

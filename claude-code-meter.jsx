@@ -6,20 +6,27 @@ import { run } from "uebersicht";
 
 // ── SETTINGS ────────────────────────────────────────────
 const DEFAULT_MODE = "remaining"; // "remaining" or "used"
-const REFRESH_MS = 60000;         // 60 seconds
+const REFRESH_MS = 300000;        // 5 minutes
 // ─────────────────────────────────────────────────────────
 
 export const refreshFrequency = REFRESH_MS;
 
 export const command = `
   BACKOFF_FILE="/tmp/claude-code-meter-backoff"
+  CACHE_FILE="/tmp/claude-code-meter-cache"
 
-  # Backoff: if rate limited, skip calls for increasing intervals
+  # Backoff: if rate limited, skip calls and serve cached data
   if [ -f "$BACKOFF_FILE" ]; then
     BACKOFF_UNTIL=$(cat "$BACKOFF_FILE" 2>/dev/null)
     NOW_S=$(date +%s)
     if [ "$NOW_S" -lt "$BACKOFF_UNTIL" ] 2>/dev/null; then
       WAIT=$((BACKOFF_UNTIL - NOW_S))
+      if [ -f "$CACHE_FILE" ]; then
+        CACHED=$(cat "$CACHE_FILE")
+        # Inject _stale flag and retry info into cached response
+        echo "$CACHED" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d['_stale']=True; d['_retryIn']=$WAIT; print(json.dumps(d))"
+        exit 0
+      fi
       echo '{"_widgetError": "rate_limited_backoff", "_retryIn": '"$WAIT"'}'
       exit 0
     fi
@@ -60,14 +67,14 @@ export const command = `
   fi
 
   if [ "$HTTP_CODE" = "429" ]; then
-    # Exponential backoff: 2min, 4min, 8min, max 15min
+    # Exponential backoff: 5min, 10min, max 15min
     NOW_S=$(date +%s)
     PREV_WAIT=0
     if [ -f "$BACKOFF_FILE.wait" ]; then
       PREV_WAIT=$(cat "$BACKOFF_FILE.wait" 2>/dev/null)
     fi
-    if [ "$PREV_WAIT" -lt 120 ] 2>/dev/null; then
-      NEXT_WAIT=120
+    if [ "$PREV_WAIT" -lt 300 ] 2>/dev/null; then
+      NEXT_WAIT=300
     elif [ "$PREV_WAIT" -lt 900 ] 2>/dev/null; then
       NEXT_WAIT=$((PREV_WAIT * 2))
       if [ "$NEXT_WAIT" -gt 900 ]; then NEXT_WAIT=900; fi
@@ -76,6 +83,12 @@ export const command = `
     fi
     echo $((NOW_S + NEXT_WAIT)) > "$BACKOFF_FILE"
     echo "$NEXT_WAIT" > "$BACKOFF_FILE.wait"
+    # Serve cached data if available
+    if [ -f "$CACHE_FILE" ]; then
+      CACHED=$(cat "$CACHE_FILE")
+      echo "$CACHED" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); d['_stale']=True; d['_retryIn']=$NEXT_WAIT; print(json.dumps(d))"
+      exit 0
+    fi
     echo '{"_widgetError": "rate_limited", "_retryIn": '"$NEXT_WAIT"'}'
     exit 0
   fi
@@ -87,6 +100,9 @@ export const command = `
     echo '{"_widgetError": "api_error", "_httpCode": '"$HTTP_CODE"'}'
     exit 0
   fi
+
+  # Cache successful response
+  echo "$BODY" > "$CACHE_FILE"
 
   echo "$BODY"
 `;
@@ -491,6 +507,7 @@ export const render = ({ output, error, mode, reauthing }, dispatch) => {
   const fiveHour = data.five_hour || { utilization: 0, resets_at: null };
   const sevenDay = data.seven_day || { utilization: 0, resets_at: null };
   const modeLabel = mode === "remaining" ? "remaining" : "used";
+  const isStale = !!data._stale;
 
   return (
     <div
@@ -522,12 +539,12 @@ export const render = ({ output, error, mode, reauthing }, dispatch) => {
               width: "6px",
               height: "6px",
               borderRadius: "50%",
-              backgroundColor: "#40c040",
-              boxShadow: "0 0 4px #40c04080",
+              backgroundColor: isStale ? AMBER : "#40c040",
+              boxShadow: `0 0 4px ${isStale ? AMBER_GLOW : "#40c04080"}`,
             }}
           />
           <span style={{ fontSize: "9px", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: TEXT_DIM }}>
-            live
+            {isStale ? "cached" : "live"}
           </span>
         </div>
         <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: AMBER }}>
