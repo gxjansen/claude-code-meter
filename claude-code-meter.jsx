@@ -418,7 +418,7 @@ function ErrorDisplay({ errorType, httpCode, retryIn, dispatch }) {
           onClick={() => {
             dispatch({ type: "REAUTH" });
             run(
-              "$HOME/.local/bin/claude auth login 2>/dev/null || /usr/local/bin/claude auth login 2>/dev/null || /opt/homebrew/bin/claude auth login 2>/dev/null"
+              `osascript -e 'tell application "Terminal" to do script "CLAUDE=$(command -v claude 2>/dev/null || echo $HOME/.local/bin/claude); \\"$CLAUDE\\" auth login; exec $SHELL"' -e 'tell application "Terminal" to activate'`
             );
           }}
           style={{
