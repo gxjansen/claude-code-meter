@@ -177,20 +177,24 @@ function formatResetTime(resetAt) {
   return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
 }
 
-function getBarColor(displayValue, mode) {
-  if (mode === "remaining") {
-    if (displayValue <= 10) return { bar: RED, dim: RED_DIM, glow: "#e0404060" };
-    if (displayValue <= 25) return { bar: AMBER, dim: AMBER_DIM, glow: AMBER_GLOW };
-    return { bar: GREEN, dim: GREEN_DIM, glow: GREEN_GLOW };
+// Color by pace (utilization rate vs time-elapsed rate in the window).
+// Low-fuel override: <=10% remaining is always red.
+// pace <= 0.8 green; 0.8 < pace <= 1.3 amber; > 1.3 red.
+function getBarColor(utilization, pace) {
+  const remaining = 100 - utilization;
+  if (remaining <= 10) return { bar: RED, dim: RED_DIM, glow: "#e0404060" };
+  if (pace == null) {
+    return { bar: AMBER, dim: AMBER_DIM, glow: AMBER_GLOW };
   }
-  if (displayValue >= 90) return { bar: RED, dim: RED_DIM, glow: "#e0404060" };
-  return { bar: AMBER, dim: AMBER_DIM, glow: AMBER_GLOW };
+  if (pace <= 0.8) return { bar: GREEN, dim: GREEN_DIM, glow: GREEN_GLOW };
+  if (pace <= 1.3) return { bar: AMBER, dim: AMBER_DIM, glow: AMBER_GLOW };
+  return { bar: RED, dim: RED_DIM, glow: "#e0404060" };
 }
 
-function UsageBar({ displayValue, mode, paceMarker, segments = 20 }) {
+function UsageBar({ displayValue, utilization, pace, paceMarker, segments = 20 }) {
   const filled = Math.round((displayValue / 100) * segments);
   const markerSeg = paceMarker != null ? Math.round((paceMarker / 100) * segments) : null;
-  const colors = getBarColor(displayValue, mode);
+  const colors = getBarColor(utilization, pace);
   // Each segment is 8px wide + 2px gap = 10px per segment
   const segWidth = 8;
   const segGap = 2;
@@ -253,12 +257,13 @@ function paceLabel(pace) {
 
 function UsageRow({ label, utilization, resetsAt, mode, windowMs }) {
   const displayValue = mode === "remaining" ? 100 - utilization : utilization;
-  const colors = getBarColor(displayValue, mode);
+  const paceInfo = calcPace(utilization, resetsAt, windowMs);
+  const pace = paceInfo ? paceInfo.pace : null;
+  const colors = getBarColor(utilization, pace);
   const { timeStr } = formatTimeLeft(resetsAt);
   const resetTime = formatResetTime(resetsAt);
   const suffix = mode === "remaining" ? "left" : "used";
 
-  const paceInfo = calcPace(utilization, resetsAt, windowMs);
   // In "remaining" mode, marker = time remaining %. In "used" mode, marker = time elapsed %.
   const paceMarker = paceInfo
     ? (mode === "remaining" ? paceInfo.timeRemainingPct : paceInfo.timeElapsedPct)
@@ -281,7 +286,7 @@ function UsageRow({ label, utilization, resetsAt, mode, windowMs }) {
           </span>
         </div>
       </div>
-      <UsageBar displayValue={displayValue} mode={mode} paceMarker={paceMarker} />
+      <UsageBar displayValue={displayValue} utilization={utilization} pace={pace} paceMarker={paceMarker} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "5px", fontSize: "10px", color: TEXT_DIM, fontFamily: "Menlo, monospace" }}>
         <span>resets {resetTime}</span>
         <span>{timeStr}</span>
