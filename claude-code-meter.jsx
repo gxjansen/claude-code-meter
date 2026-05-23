@@ -450,12 +450,12 @@ function ErrorDisplay({ errorType, httpCode, retryIn, dispatch }) {
   );
 }
 
-export const className = {
+export const className = `
   bottom: "20px",
   right: "20px",
   width: "280px",
   zIndex: 1,
-};
+`;
 
 export const render = ({ output, error, mode, reauthing }, dispatch) => {
   if (error) {
